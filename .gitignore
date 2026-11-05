@@ -1,0 +1,10 @@
+# Binaries
+/bin/
+*.exe
+*.test
+*.out
+
+# Local environment
+.env
+
+.vscode/

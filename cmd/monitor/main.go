@@ -14,6 +14,7 @@ import (
 
 	"github.com/Freze27/availability-monitor/internal/config"
 	"github.com/Freze27/availability-monitor/internal/httpapi"
+	"github.com/Freze27/availability-monitor/internal/storage"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 	writeTimeout      = 15 * time.Second
 	idleTimeout       = 60 * time.Second
 	shutdownTimeout   = 10 * time.Second
+	dbInitTimeout     = 30 * time.Second
 )
 
 func main() {
@@ -38,7 +40,29 @@ func run(logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+	if cfg.CheckTimeout >= writeTimeout {
+		return fmt.Errorf("CHECK_TIMEOUT must be less than %s, got %s", writeTimeout, cfg.CheckTimeout)
+	}
+
+	dbCtx, cancelDB := context.WithTimeout(ctx, dbInitTimeout)
+	defer cancelDB()
+
+	store, err := storage.New(dbCtx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("connect to database: %w", err)
+	}
+	defer store.Close()
+	logger.Info("database connected")
+
+	applied, err := store.Migrate(dbCtx)
+	if err != nil {
+		return fmt.Errorf("migrate database: %w", err)
+	}
+	logger.Info("migrations applied", "count", applied)
 
 	srv := &http.Server{
 		Handler:           httpapi.NewRouter(),

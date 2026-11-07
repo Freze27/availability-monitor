@@ -11,3 +11,15 @@ type Target struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
+
+type NewTarget struct {
+	Name            string
+	URL             string
+	IntervalSeconds int
+}
+
+type TargetUpdate struct {
+	Name            *string
+	URL             *string
+	IntervalSeconds *int
+}

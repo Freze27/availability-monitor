@@ -14,6 +14,7 @@ import (
 
 	"github.com/Freze27/availability-monitor/internal/config"
 	"github.com/Freze27/availability-monitor/internal/httpapi"
+	"github.com/Freze27/availability-monitor/internal/service"
 	"github.com/Freze27/availability-monitor/internal/storage"
 )
 
@@ -65,7 +66,7 @@ func run(logger *slog.Logger) error {
 	logger.Info("migrations applied", "count", applied)
 
 	srv := &http.Server{
-		Handler:           httpapi.NewRouter(),
+		Handler:           httpapi.NewRouter(service.NewTargetService(store), logger),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,

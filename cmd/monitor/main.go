@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Freze27/availability-monitor/internal/checker"
 	"github.com/Freze27/availability-monitor/internal/config"
 	"github.com/Freze27/availability-monitor/internal/httpapi"
 	"github.com/Freze27/availability-monitor/internal/service"
@@ -65,8 +66,14 @@ func run(logger *slog.Logger) error {
 	}
 	logger.Info("migrations applied", "count", applied)
 
+	router := httpapi.NewRouter(
+		service.NewTargetService(store),
+		service.NewCheckService(store, checker.New(cfg.CheckTimeout)),
+		logger,
+	)
+
 	srv := &http.Server{
-		Handler:           httpapi.NewRouter(service.NewTargetService(store), logger),
+		Handler:           router,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,

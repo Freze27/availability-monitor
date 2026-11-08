@@ -19,6 +19,7 @@ func NewRouter(targets TargetService, checks CheckService, logger *slog.Logger) 
 	mux.HandleFunc("DELETE /targets/{id}", th.delete)
 
 	mux.HandleFunc("POST /targets/{id}/checks", ch.run)
+	mux.HandleFunc("GET /targets/{id}/checks", ch.list)
 
 	return logRequests(logger, recoverPanics(logger, handleRouteErrors(mux)))
 }

@@ -26,6 +26,34 @@ func (s *Storage) CreateCheck(ctx context.Context, c domain.Check) (domain.Check
 	return check, nil
 }
 
+func (s *Storage) ListChecks(ctx context.Context, targetID int64, limit int) ([]domain.Check, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT `+checkColumns+`
+		 FROM checks
+		 WHERE target_id = $1::bigint
+		 ORDER BY checked_at DESC, id DESC
+		 LIMIT $2`,
+		targetID, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select checks of target %d: %w", targetID, err)
+	}
+	defer rows.Close()
+
+	checks := []domain.Check{}
+	for rows.Next() {
+		check, err := scanCheck(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan check: %w", err)
+		}
+		checks = append(checks, check)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate checks: %w", err)
+	}
+	return checks, nil
+}
+
 func scanCheck(row pgx.Row) (domain.Check, error) {
 	var c domain.Check
 	var durationMS int64

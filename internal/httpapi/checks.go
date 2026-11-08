@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Freze27/availability-monitor/internal/domain"
@@ -11,6 +12,7 @@ import (
 
 type CheckService interface {
 	RunCheck(ctx context.Context, targetID int64) (domain.Check, error)
+	ListChecks(ctx context.Context, targetID int64, limit *int) ([]domain.Check, error)
 }
 
 type checkHandler struct {
@@ -52,4 +54,35 @@ func (h *checkHandler) run(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, toCheckResponse(check))
+}
+
+func (h *checkHandler) list(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r)
+	if !ok {
+		return
+	}
+
+	var limit *int
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil {
+			writeServiceError(w, r, h.logger, &domain.ValidationError{Fields: map[string]string{
+				"limit": "must be an integer",
+			}})
+			return
+		}
+		limit = &n
+	}
+
+	checks, err := h.svc.ListChecks(r.Context(), id, limit)
+	if err != nil {
+		writeServiceError(w, r, h.logger, err)
+		return
+	}
+
+	resp := make([]checkResponse, 0, len(checks))
+	for _, c := range checks {
+		resp = append(resp, toCheckResponse(c))
+	}
+	writeJSON(w, http.StatusOK, resp)
 }

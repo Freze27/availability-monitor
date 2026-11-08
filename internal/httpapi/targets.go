@@ -13,7 +13,7 @@ import (
 type TargetService interface {
 	Create(ctx context.Context, t domain.NewTarget) (domain.Target, error)
 	Get(ctx context.Context, id int64) (domain.Target, error)
-	List(ctx context.Context) ([]domain.Target, error)
+	List(ctx context.Context) ([]domain.TargetWithLastCheck, error)
 	Update(ctx context.Context, id int64, u domain.TargetUpdate) (domain.Target, error)
 	Delete(ctx context.Context, id int64) error
 }
@@ -43,6 +43,29 @@ type targetResponse struct {
 	Paused          bool      `json:"paused"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+type lastCheckResponse struct {
+	Outcome    domain.Outcome `json:"outcome"`
+	CheckedAt  time.Time      `json:"checked_at"`
+	DurationMS int64          `json:"duration_ms"`
+}
+
+type targetListItemResponse struct {
+	targetResponse
+	LastCheck *lastCheckResponse `json:"last_check"`
+}
+
+func toTargetListItemResponse(t domain.TargetWithLastCheck) targetListItemResponse {
+	item := targetListItemResponse{targetResponse: toTargetResponse(t.Target)}
+	if t.LastCheck != nil {
+		item.LastCheck = &lastCheckResponse{
+			Outcome:    t.LastCheck.Outcome,
+			CheckedAt:  t.LastCheck.CheckedAt,
+			DurationMS: t.LastCheck.Duration.Milliseconds(),
+		}
+	}
+	return item
 }
 
 func toTargetResponse(t domain.Target) targetResponse {
@@ -85,9 +108,9 @@ func (h *targetHandler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := make([]targetResponse, 0, len(targets))
+	resp := make([]targetListItemResponse, 0, len(targets))
 	for _, t := range targets {
-		resp = append(resp, toTargetResponse(t))
+		resp = append(resp, toTargetListItemResponse(t))
 	}
 	writeJSON(w, http.StatusOK, resp)
 }

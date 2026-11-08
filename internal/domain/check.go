@@ -20,3 +20,9 @@ type Check struct {
 	Duration   time.Duration
 	Error      *string
 }
+
+type LastCheck struct {
+	Outcome   Outcome
+	CheckedAt time.Time
+	Duration  time.Duration
+}

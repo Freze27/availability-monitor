@@ -33,6 +33,7 @@ type updateTargetRequest struct {
 	Name            *string `json:"name"`
 	URL             *string `json:"url"`
 	IntervalSeconds *int    `json:"interval_seconds"`
+	Paused          *bool   `json:"paused"`
 }
 
 type targetResponse struct {
@@ -145,6 +146,7 @@ func (h *targetHandler) update(w http.ResponseWriter, r *http.Request) {
 		Name:            req.Name,
 		URL:             req.URL,
 		IntervalSeconds: req.IntervalSeconds,
+		Paused:          req.Paused,
 	})
 	if err != nil {
 		writeServiceError(w, r, h.logger, err)

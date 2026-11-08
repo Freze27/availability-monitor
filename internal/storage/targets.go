@@ -117,10 +117,11 @@ func (s *Storage) UpdateTarget(ctx context.Context, id int64, u domain.TargetUpd
 		 SET name             = COALESCE($2, name),
 		     url              = COALESCE($3, url),
 		     interval_seconds = COALESCE($4, interval_seconds),
+		     paused           = COALESCE($5, paused),
 		     updated_at       = now()
 		 WHERE id = $1::bigint
 		 RETURNING `+targetColumns,
-		id, u.Name, u.URL, u.IntervalSeconds,
+		id, u.Name, u.URL, u.IntervalSeconds, u.Paused,
 	)
 	target, err := scanTarget(row)
 	if err != nil {

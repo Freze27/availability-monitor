@@ -105,3 +105,26 @@ func scanCheck(row pgx.Row) (domain.Check, error) {
 	c.Duration = time.Duration(durationMS) * time.Millisecond
 	return c, nil
 }
+
+func (s *Storage) ListSummaryPoints(ctx context.Context, targetID int64, from, to time.Time) ([]domain.SummaryPoint, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT checked_at, outcome
+		 FROM checks
+		 WHERE target_id = $1::bigint AND checked_at >= $2 AND checked_at <= $3
+		 ORDER BY checked_at, id`,
+		targetID, from, to,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select summary points of target %d: %w", targetID, err)
+	}
+
+	points, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.SummaryPoint, error) {
+		var p domain.SummaryPoint
+		err := row.Scan(&p.CheckedAt, &p.Outcome)
+		return p, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("scan summary points: %w", err)
+	}
+	return points, nil
+}

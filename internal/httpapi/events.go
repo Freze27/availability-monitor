@@ -26,7 +26,7 @@ type eventResponse struct {
 }
 
 func (h *eventHandler) list(w http.ResponseWriter, r *http.Request) {
-	limit, err := parseLimit(r)
+	limit, err := parseIntQuery(r, "limit")
 	if err != nil {
 		writeServiceError(w, r, h.logger, err)
 		return

@@ -9,6 +9,8 @@ const (
 	OutcomeHTTPError    Outcome = "http_error"
 	OutcomeTimeout      Outcome = "timeout"
 	OutcomeNetworkError Outcome = "network_error"
+
+	InitialOutcome = OutcomeUp
 )
 
 type Check struct {

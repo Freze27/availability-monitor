@@ -68,7 +68,7 @@ func run(logger *slog.Logger) error {
 	logger.Info("migrations applied", "count", applied)
 
 	checks := service.NewCheckService(store, checker.New(cfg.CheckTimeout))
-	router := httpapi.NewRouter(service.NewTargetService(store), checks, logger)
+	router := httpapi.NewRouter(service.NewTargetService(store), checks, service.NewEventService(store), logger)
 
 	srv := &http.Server{
 		Handler:           router,

@@ -15,6 +15,8 @@ func writeServiceError(w http.ResponseWriter, r *http.Request, logger *slog.Logg
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "validation failed", Fields: validationErr.Fields})
 	case errors.Is(err, domain.ErrTargetNotFound):
 		writeError(w, http.StatusNotFound, domain.ErrTargetNotFound.Error())
+	case errors.Is(err, domain.ErrCheckInProgress):
+		writeError(w, http.StatusConflict, domain.ErrCheckInProgress.Error())
 	default:
 		logger.Error("request failed", "method", r.Method, "path", r.URL.Path, "error", err)
 		writeError(w, http.StatusInternalServerError, "internal server error")

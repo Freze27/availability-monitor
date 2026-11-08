@@ -25,13 +25,37 @@ type Checker interface {
 type CheckService struct {
 	repo    CheckRepository
 	checker Checker
+	busy    *busySet
 }
 
 func NewCheckService(repo CheckRepository, checker Checker) *CheckService {
-	return &CheckService{repo: repo, checker: checker}
+	return &CheckService{repo: repo, checker: checker, busy: newBusySet()}
 }
 
 func (s *CheckService) RunCheck(ctx context.Context, targetID int64) (domain.Check, error) {
+	if !s.busy.tryAcquire(targetID) {
+		return domain.Check{}, domain.ErrCheckInProgress
+	}
+	defer s.busy.release(targetID)
+
+	return s.run(ctx, targetID)
+}
+
+func (s *CheckService) TryReserve(targetID int64) bool {
+	return s.busy.tryAcquire(targetID)
+}
+
+func (s *CheckService) Release(targetID int64) {
+	s.busy.release(targetID)
+}
+
+func (s *CheckService) RunReserved(ctx context.Context, targetID int64) (domain.Check, error) {
+	defer s.busy.release(targetID)
+
+	return s.run(ctx, targetID)
+}
+
+func (s *CheckService) run(ctx context.Context, targetID int64) (domain.Check, error) {
 	target, err := s.repo.GetTarget(ctx, targetID)
 	if err != nil {
 		return domain.Check{}, err

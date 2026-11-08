@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -15,7 +16,13 @@ type Config struct {
 	DatabaseURL   string
 	CheckTimeout  time.Duration
 	SchedulerTick time.Duration
+	CheckWorkers  int
 }
+
+const (
+	minSchedulerTick = time.Second
+	maxCheckWorkers  = 1000
+)
 
 func Load() (Config, error) {
 	if err := godotenv.Load(); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -30,6 +37,16 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	if schedulerTick < minSchedulerTick {
+		return Config{}, fmt.Errorf("SCHEDULER_TICK must be at least %s, got %s", minSchedulerTick, schedulerTick)
+	}
+	checkWorkers, err := getPositiveInt("CHECK_WORKERS", 50)
+	if err != nil {
+		return Config{}, err
+	}
+	if checkWorkers > maxCheckWorkers {
+		return Config{}, fmt.Errorf("CHECK_WORKERS must be at most %d, got %d", maxCheckWorkers, checkWorkers)
+	}
 
 	databaseURL := getEnv("DATABASE_URL", "")
 	if databaseURL == "" {
@@ -41,6 +58,7 @@ func Load() (Config, error) {
 		DatabaseURL:   databaseURL,
 		CheckTimeout:  checkTimeout,
 		SchedulerTick: schedulerTick,
+		CheckWorkers:  checkWorkers,
 	}, nil
 }
 
@@ -49,6 +67,21 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func getPositiveInt(key string, fallback int) (int, error) {
+	v := getEnv(key, "")
+	if v == "" {
+		return fallback, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	if n <= 0 {
+		return 0, fmt.Errorf("%s must be positive, got %s", key, v)
+	}
+	return n, nil
 }
 
 func getDuration(key string, fallback time.Duration) (time.Duration, error) {

@@ -15,6 +15,7 @@ import (
 	"github.com/Freze27/availability-monitor/internal/checker"
 	"github.com/Freze27/availability-monitor/internal/config"
 	"github.com/Freze27/availability-monitor/internal/httpapi"
+	"github.com/Freze27/availability-monitor/internal/scheduler"
 	"github.com/Freze27/availability-monitor/internal/service"
 	"github.com/Freze27/availability-monitor/internal/storage"
 )
@@ -66,11 +67,8 @@ func run(logger *slog.Logger) error {
 	}
 	logger.Info("migrations applied", "count", applied)
 
-	router := httpapi.NewRouter(
-		service.NewTargetService(store),
-		service.NewCheckService(store, checker.New(cfg.CheckTimeout)),
-		logger,
-	)
+	checks := service.NewCheckService(store, checker.New(cfg.CheckTimeout))
+	router := httpapi.NewRouter(service.NewTargetService(store), checks, logger)
 
 	srv := &http.Server{
 		Handler:           router,
@@ -86,6 +84,18 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("listen on %s: %w", cfg.HTTPAddr, err)
 	}
 	logger.Info("server started", "addr", ln.Addr().String())
+
+	sched := scheduler.New(store, checks, cfg.SchedulerTick, cfg.CheckWorkers, logger)
+	schedCtx, stopScheduler := context.WithCancel(ctx)
+	schedDone := make(chan struct{})
+	go func() {
+		defer close(schedDone)
+		sched.Run(schedCtx)
+	}()
+	defer func() {
+		stopScheduler()
+		<-schedDone
+	}()
 
 	errCh := make(chan error, 1)
 	go func() {

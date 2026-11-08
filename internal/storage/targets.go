@@ -83,6 +83,34 @@ func (s *Storage) ListTargets(ctx context.Context) ([]domain.TargetWithLastCheck
 	return targets, nil
 }
 
+func (s *Storage) ListDueTargets(ctx context.Context, dueBy time.Time, limit int) ([]int64, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT t.id
+		 FROM targets t
+		 LEFT JOIN LATERAL (
+		     SELECT checked_at
+		     FROM checks
+		     WHERE target_id = t.id
+		     ORDER BY checked_at DESC
+		     LIMIT 1
+		 ) last ON true
+		 WHERE NOT t.paused
+		   AND (last.checked_at IS NULL
+		        OR last.checked_at + t.interval_seconds * interval '1 second' <= $1)
+		 ORDER BY last.checked_at + t.interval_seconds * interval '1 second' NULLS FIRST, t.id
+		 LIMIT $2`,
+		dueBy, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select due targets: %w", err)
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[int64])
+	if err != nil {
+		return nil, fmt.Errorf("scan due targets: %w", err)
+	}
+	return ids, nil
+}
+
 func (s *Storage) UpdateTarget(ctx context.Context, id int64, u domain.TargetUpdate) (domain.Target, error) {
 	row := s.pool.QueryRow(ctx,
 		`UPDATE targets

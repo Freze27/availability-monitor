@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -38,20 +39,43 @@ func (s *Storage) GetTarget(ctx context.Context, id int64) (domain.Target, error
 	return target, nil
 }
 
-func (s *Storage) ListTargets(ctx context.Context) ([]domain.Target, error) {
-	rows, err := s.pool.Query(ctx, `SELECT `+targetColumns+` FROM targets ORDER BY id`)
+func (s *Storage) ListTargets(ctx context.Context) ([]domain.TargetWithLastCheck, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT `+targetColumns+`, lc.outcome, lc.checked_at, lc.duration_ms
+		 FROM targets t
+		 LEFT JOIN LATERAL (
+		     SELECT outcome, checked_at, duration_ms
+		     FROM checks
+		     WHERE target_id = t.id
+		     ORDER BY checked_at DESC, id DESC
+		     LIMIT 1
+		 ) lc ON true
+		 ORDER BY t.id`,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("select targets: %w", err)
 	}
 	defer rows.Close()
 
-	targets := []domain.Target{}
+	targets := []domain.TargetWithLastCheck{}
 	for rows.Next() {
-		target, err := scanTarget(rows)
+		var t domain.TargetWithLastCheck
+		var outcome *domain.Outcome
+		var checkedAt *time.Time
+		var durationMS *int64
+		err := rows.Scan(&t.ID, &t.Name, &t.URL, &t.IntervalSeconds, &t.Paused, &t.CreatedAt, &t.UpdatedAt,
+			&outcome, &checkedAt, &durationMS)
 		if err != nil {
 			return nil, fmt.Errorf("scan target: %w", err)
 		}
-		targets = append(targets, target)
+		if outcome != nil {
+			t.LastCheck = &domain.LastCheck{
+				Outcome:   *outcome,
+				CheckedAt: *checkedAt,
+				Duration:  time.Duration(*durationMS) * time.Millisecond,
+			}
+		}
+		targets = append(targets, t)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate targets: %w", err)

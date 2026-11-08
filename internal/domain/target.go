@@ -12,6 +12,11 @@ type Target struct {
 	UpdatedAt       time.Time
 }
 
+type TargetWithLastCheck struct {
+	Target
+	LastCheck *LastCheck
+}
+
 type NewTarget struct {
 	Name            string
 	URL             string

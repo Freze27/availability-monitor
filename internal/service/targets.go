@@ -18,7 +18,7 @@ const (
 type TargetRepository interface {
 	CreateTarget(ctx context.Context, t domain.NewTarget) (domain.Target, error)
 	GetTarget(ctx context.Context, id int64) (domain.Target, error)
-	ListTargets(ctx context.Context) ([]domain.Target, error)
+	ListTargets(ctx context.Context) ([]domain.TargetWithLastCheck, error)
 	UpdateTarget(ctx context.Context, id int64, u domain.TargetUpdate) (domain.Target, error)
 	DeleteTarget(ctx context.Context, id int64) error
 }
@@ -60,7 +60,7 @@ func (s *TargetService) Get(ctx context.Context, id int64) (domain.Target, error
 	return s.repo.GetTarget(ctx, id)
 }
 
-func (s *TargetService) List(ctx context.Context) ([]domain.Target, error) {
+func (s *TargetService) List(ctx context.Context) ([]domain.TargetWithLastCheck, error) {
 	return s.repo.ListTargets(ctx)
 }
 

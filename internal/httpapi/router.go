@@ -21,6 +21,7 @@ func NewRouter(targets TargetService, checks CheckService, events EventService, 
 
 	mux.HandleFunc("POST /targets/{id}/checks", ch.run)
 	mux.HandleFunc("GET /targets/{id}/checks", ch.list)
+	mux.HandleFunc("GET /targets/{id}/summary", ch.summary)
 
 	mux.HandleFunc("GET /events", eh.list)
 

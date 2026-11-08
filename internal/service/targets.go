@@ -65,14 +65,14 @@ func (s *TargetService) List(ctx context.Context) ([]domain.TargetWithLastCheck,
 }
 
 func (s *TargetService) Update(ctx context.Context, id int64, u domain.TargetUpdate) (domain.Target, error) {
-	if u.Name == nil && u.URL == nil && u.IntervalSeconds == nil {
+	if u.Name == nil && u.URL == nil && u.IntervalSeconds == nil && u.Paused == nil {
 		return domain.Target{}, &domain.ValidationError{Fields: map[string]string{
-			"body": "at least one of name, url, interval_seconds must be provided",
+			"body": "at least one of name, url, interval_seconds, paused must be provided",
 		}}
 	}
 
 	fields := map[string]string{}
-	var normalized domain.TargetUpdate
+	normalized := domain.TargetUpdate{Paused: u.Paused}
 
 	if u.Name != nil {
 		name, msg := normalizeName(*u.Name)

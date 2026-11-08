@@ -27,4 +27,5 @@ type TargetUpdate struct {
 	Name            *string
 	URL             *string
 	IntervalSeconds *int
+	Paused          *bool
 }

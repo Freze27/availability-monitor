@@ -16,14 +16,14 @@ func parseID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return id, true
 }
 
-func parseLimit(r *http.Request) (*int, error) {
-	raw := r.URL.Query().Get("limit")
+func parseIntQuery(r *http.Request, name string) (*int, error) {
+	raw := r.URL.Query().Get(name)
 	if raw == "" {
 		return nil, nil
 	}
 	n, err := strconv.Atoi(raw)
 	if err != nil {
-		return nil, &domain.ValidationError{Fields: map[string]string{"limit": "must be an integer"}}
+		return nil, &domain.ValidationError{Fields: map[string]string{name: "must be an integer"}}
 	}
 	return &n, nil
 }

@@ -2,14 +2,22 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/Freze27/availability-monitor/internal/domain"
+)
+
+const (
+	defaultSummaryHours = 24
+	maxSummaryHours     = 7 * 24
 )
 
 type CheckRepository interface {
 	GetTarget(ctx context.Context, id int64) (domain.Target, error)
 	CreateCheck(ctx context.Context, c domain.Check) (domain.Check, error)
 	ListChecks(ctx context.Context, targetID int64, limit int) ([]domain.Check, error)
+	ListSummaryPoints(ctx context.Context, targetID int64, from, to time.Time) ([]domain.SummaryPoint, error)
 }
 
 type Checker interface {
@@ -74,4 +82,49 @@ func (s *CheckService) ListChecks(ctx context.Context, targetID int64, limit *in
 		return nil, err
 	}
 	return s.repo.ListChecks(ctx, targetID, n)
+}
+
+func (s *CheckService) Summary(ctx context.Context, targetID int64, hours *int) (domain.Summary, error) {
+	h := defaultSummaryHours
+	if hours != nil {
+		if *hours < 1 || *hours > maxSummaryHours {
+			return domain.Summary{}, &domain.ValidationError{Fields: map[string]string{
+				"hours": fmt.Sprintf("must be between 1 and %d", maxSummaryHours),
+			}}
+		}
+		h = *hours
+	}
+
+	if _, err := s.repo.GetTarget(ctx, targetID); err != nil {
+		return domain.Summary{}, err
+	}
+
+	to := time.Now().UTC()
+	from := to.Add(-time.Duration(h) * time.Hour)
+	points, err := s.repo.ListSummaryPoints(ctx, targetID, from, to)
+	if err != nil {
+		return domain.Summary{}, err
+	}
+
+	summary := domain.Summary{
+		TargetID: targetID,
+		Hours:    h,
+		From:     from,
+		To:       to,
+		OtherByOutcome: map[domain.Outcome]int{
+			domain.OutcomeHTTPError:    0,
+			domain.OutcomeTimeout:      0,
+			domain.OutcomeNetworkError: 0,
+		},
+		Points: points,
+	}
+	for _, p := range points {
+		if p.Outcome == domain.OutcomeUp {
+			summary.Up++
+		} else {
+			summary.Other++
+			summary.OtherByOutcome[p.Outcome]++
+		}
+	}
+	return summary, nil
 }

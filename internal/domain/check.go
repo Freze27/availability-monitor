@@ -28,3 +28,19 @@ type LastCheck struct {
 	CheckedAt time.Time
 	Duration  time.Duration
 }
+
+type SummaryPoint struct {
+	CheckedAt time.Time
+	Outcome   Outcome
+}
+
+type Summary struct {
+	TargetID       int64
+	Hours          int
+	From           time.Time
+	To             time.Time
+	Up             int
+	Other          int
+	OtherByOutcome map[Outcome]int
+	Points         []SummaryPoint
+}

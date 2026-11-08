@@ -5,7 +5,10 @@ import (
 	"fmt"
 )
 
-var ErrTargetNotFound = errors.New("target not found")
+var (
+	ErrTargetNotFound  = errors.New("target not found")
+	ErrCheckInProgress = errors.New("check already in progress for this target")
+)
 
 type ValidationError struct {
 	Fields map[string]string

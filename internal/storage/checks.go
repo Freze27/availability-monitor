@@ -2,15 +2,20 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/Freze27/availability-monitor/internal/domain"
 )
 
-const checkColumns = "id, target_id, checked_at, outcome, status_code, duration_ms, error"
+const (
+	checkColumns        = "id, target_id, checked_at, outcome, status_code, duration_ms, error"
+	foreignKeyViolation = "23503"
+)
 
 func (s *Storage) CreateCheck(ctx context.Context, c domain.Check) (domain.Check, error) {
 	row := s.pool.QueryRow(ctx,
@@ -20,6 +25,10 @@ func (s *Storage) CreateCheck(ctx context.Context, c domain.Check) (domain.Check
 		c.TargetID, c.CheckedAt, c.Outcome, c.StatusCode, c.Duration.Milliseconds(), c.Error,
 	)
 	check, err := scanCheck(row)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == foreignKeyViolation {
+		return domain.Check{}, fmt.Errorf("insert check: %w", domain.ErrTargetNotFound)
+	}
 	if err != nil {
 		return domain.Check{}, fmt.Errorf("insert check: %w", err)
 	}

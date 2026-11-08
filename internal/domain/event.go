@@ -15,3 +15,13 @@ type Event struct {
 	Kind       EventKind
 	OccurredAt time.Time
 }
+
+func TransitionEvent(prev, curr Outcome) (EventKind, bool) {
+	switch {
+	case prev == OutcomeUp && curr != OutcomeUp:
+		return EventDown, true
+	case prev != OutcomeUp && curr == OutcomeUp:
+		return EventUp, true
+	}
+	return "", false
+}

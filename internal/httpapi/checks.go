@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/Freze27/availability-monitor/internal/domain"
@@ -62,16 +61,10 @@ func (h *checkHandler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var limit *int
-	if raw := r.URL.Query().Get("limit"); raw != "" {
-		n, err := strconv.Atoi(raw)
-		if err != nil {
-			writeServiceError(w, r, h.logger, &domain.ValidationError{Fields: map[string]string{
-				"limit": "must be an integer",
-			}})
-			return
-		}
-		limit = &n
+	limit, err := parseLimit(r)
+	if err != nil {
+		writeServiceError(w, r, h.logger, err)
+		return
 	}
 
 	checks, err := h.svc.ListChecks(r.Context(), id, limit)

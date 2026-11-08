@@ -2,14 +2,8 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Freze27/availability-monitor/internal/domain"
-)
-
-const (
-	defaultChecksLimit = 100
-	maxChecksLimit     = 1000
 )
 
 type CheckRepository interface {
@@ -71,14 +65,9 @@ func (s *CheckService) run(ctx context.Context, targetID int64) (domain.Check, e
 }
 
 func (s *CheckService) ListChecks(ctx context.Context, targetID int64, limit *int) ([]domain.Check, error) {
-	n := defaultChecksLimit
-	if limit != nil {
-		if *limit < 1 || *limit > maxChecksLimit {
-			return nil, &domain.ValidationError{Fields: map[string]string{
-				"limit": fmt.Sprintf("must be between 1 and %d", maxChecksLimit),
-			}}
-		}
-		n = *limit
+	n, err := resolveLimit(limit)
+	if err != nil {
+		return nil, err
 	}
 
 	if _, err := s.repo.GetTarget(ctx, targetID); err != nil {

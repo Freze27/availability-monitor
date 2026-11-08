@@ -5,9 +5,10 @@ import (
 	"net/http"
 )
 
-func NewRouter(targets TargetService, checks CheckService, logger *slog.Logger) http.Handler {
+func NewRouter(targets TargetService, checks CheckService, events EventService, logger *slog.Logger) http.Handler {
 	th := &targetHandler{svc: targets, logger: logger}
 	ch := &checkHandler{svc: checks, logger: logger}
+	eh := &eventHandler{svc: events, logger: logger}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handleHealth)
@@ -20,6 +21,8 @@ func NewRouter(targets TargetService, checks CheckService, logger *slog.Logger) 
 
 	mux.HandleFunc("POST /targets/{id}/checks", ch.run)
 	mux.HandleFunc("GET /targets/{id}/checks", ch.list)
+
+	mux.HandleFunc("GET /events", eh.list)
 
 	return logRequests(logger, recoverPanics(logger, handleRouteErrors(mux)))
 }

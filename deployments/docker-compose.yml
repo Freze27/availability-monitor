@@ -3,8 +3,10 @@ name: availability-monitor
 services:
   postgres:
     image: postgres:18-alpine
-    env_file:
-      - ../.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -14,6 +16,24 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ..
+      dockerfile: build/package/Dockerfile
+    environment:
+      HTTP_ADDR: 0.0.0.0:8080
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      CHECK_TIMEOUT: ${CHECK_TIMEOUT:-5s}
+      SCHEDULER_TICK: ${SCHEDULER_TICK:-1s}
+      CHECK_WORKERS: ${CHECK_WORKERS:-50}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 20s
     restart: unless-stopped
 
 volumes:

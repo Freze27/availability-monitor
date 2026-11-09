@@ -1,0 +1,19 @@
+info:
+  name: Лента событий
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: '{{baseUrl}}/events?limit=100'
+  params:
+    - name: limit
+      value: "100"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

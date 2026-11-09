@@ -1,0 +1,22 @@
+info:
+  name: Изменить адрес
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: '{{baseUrl}}/targets/{{targetId}}'
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Example (renamed)",
+        "interval_seconds": 600
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

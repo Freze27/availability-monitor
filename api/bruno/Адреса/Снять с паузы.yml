@@ -1,0 +1,21 @@
+info:
+  name: Снять с паузы
+  type: http
+  seq: 6
+
+http:
+  method: PATCH
+  url: '{{baseUrl}}/targets/{{targetId}}'
+  body:
+    type: json
+    data: |-
+      {
+        "paused": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

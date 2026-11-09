@@ -1,0 +1,21 @@
+info:
+  name: Поставить на паузу
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: '{{baseUrl}}/targets/{{targetId}}'
+  body:
+    type: json
+    data: |-
+      {
+        "paused": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

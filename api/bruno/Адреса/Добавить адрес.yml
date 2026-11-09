@@ -1,0 +1,34 @@
+info:
+  name: Добавить адрес
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: '{{baseUrl}}/targets'
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Example",
+        "url": "https://example.com",
+        "interval_seconds": 300
+      }
+  auth: inherit
+
+runtime:
+  actions:
+    - type: set-variable
+      phase: after-response
+      selector:
+        expression: res.body.id
+        method: jsonq
+      variable:
+        name: targetId
+        scope: runtime
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
